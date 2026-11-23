@@ -1,24 +1,47 @@
+import asyncio
 import socket
 
 
-def main():
-    # You can use print statements as follows for debugging, they'll be visible when running tests.
-    print("Logs from your program will appear here!")
+async def send_ping(client_socket: socket.socket):
+    try:
+        while True:
+            data = client_socket.recv(1024)
+            if not data:
+                break
 
-    # Uncomment the code below to pass the first stage
-    #
-    server_socket = socket.create_server(("localhost", 6379), reuse_port=True)
+            client_socket.sendall(b"+PONG\r\n")
 
-    connection, _ = server_socket.accept()  # wait for client
+    except ConnectionResetError, BrokenPipeError, asyncio.CancelledError:
+        pass
+
+
+async def main(host="127.0.0.1", port=6379):
+    loop = asyncio.get_running_loop()
+
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server_socket.bind((host, port))
+    server_socket.listen()
+    server_socket.setblocking(False)
+
+    print(f"Server listening on {host}:{port}...")
+
+    try:
+        while True:
+            client_socket, _ = await loop.sock_accept(server_socket)
+            client_socket.setblocking(False)
+            asyncio.create_task(send_ping(client_socket))
+    finally:
+        server_socket.close()
 
     # connection.sendall(b"+PONG\r\n")
 
-    while True:
-        data = connection.recv(1024)
-        if not data:
-            break
-        connection.sendall(b"+PONG\r\n")
+    # while True:
+    #     data = connection.recv(1024)
+    #     if not data:
+    #         break
+    #     connection.sendall(b"+PONG\r\n")
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
