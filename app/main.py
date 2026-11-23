@@ -2,14 +2,14 @@ import asyncio
 import socket
 
 
-async def send_ping(client_socket: socket.socket):
+async def send_ping(loop: asyncio.AbstractEventLoop, client_socket: socket.socket):
     try:
         while True:
-            data = client_socket.recv(1024)
+            data = await loop.sock_recv(client_socket, 1024)
             if not data:
                 break
 
-            client_socket.sendall(b"+PONG\r\n")
+            await loop.sock_sendall(client_socket, b"+PONG\r\n")
 
     except ConnectionResetError, BrokenPipeError, asyncio.CancelledError:
         pass
@@ -30,7 +30,7 @@ async def main(host="127.0.0.1", port=6379):
         while True:
             client_socket, _ = await loop.sock_accept(server_socket)
             client_socket.setblocking(False)
-            asyncio.create_task(send_ping(client_socket))
+            asyncio.create_task(send_ping(loop, client_socket))
     finally:
         server_socket.close()
 
