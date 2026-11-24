@@ -1,18 +1,18 @@
 import asyncio
 
 
-async def read_command(reader: asyncio.StreamReader) -> list[bytes] | None:
+async def read_command(reader: asyncio.StreamReader) -> list[bytes]:
     line = await reader.readuntil(b"\r\n")
-    print(line)
+
+    args = []
+    print(line[0])
 
     if line[0] == ord("*"):
-        return None
+        return args
 
     n = int(line[1:-2])
 
     print(n)
-
-    args = []
 
     for _ in range(n):
         header = await reader.readuntil(b"\r\n")
@@ -32,8 +32,6 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
         #     writer.write(b"+PONG\r\n")
         #     await writer.drain()
         args = await read_command(reader)
-        if not args:
-            return
         
         cmd = args[0].upper()
 
