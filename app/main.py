@@ -10,7 +10,7 @@ BULK_BYTES_TYPE = b"$"
 
 
 def simple_string(b: bytes):
-    return CLRF_BYTES + b + CLRF_BYTES
+    return b"+" + b + CLRF_BYTES
 
 
 def bulk_string(b: bytes | None):
