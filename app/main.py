@@ -11,8 +11,6 @@ async def read_command(reader: asyncio.StreamReader) -> list[bytes]:
 
     n = int(line[1:-2])
 
-    print(line)
-
     for _ in range(n):
         header = await reader.readuntil(b"\r\n")
         length = int(header[1:-2])
@@ -24,22 +22,23 @@ async def read_command(reader: asyncio.StreamReader) -> list[bytes]:
 
 async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
     try:
-        # while await reader.read(1024):
-        #     writer.write(b"+PONG\r\n")
-        #     await writer.drain()
-        args = await read_command(reader)
+        while True:
+            args = await read_command(reader)
 
-        if len(args) < 1:
-            return
-        
-        cmd = args[0].upper()
+            if len(args) < 1:
+                continue
 
-        if cmd == b"PING":
-            writer.write(b"+PONG\r\n")
-        elif cmd == b"ECHO":
-            writer.write(args[1])
+            cmd = args[0].upper()
 
-        await writer.drain()
+            if cmd == b"PING":
+                writer.write(b"+PONG\r\n")
+            elif cmd == b"ECHO":
+                msg = args[1]
+                writer.write(b"$" + str(len(msg)).encode() + b"\r\n" + msg + b"\r\n")
+
+            await writer.drain()
+    except (asyncio.IncompleteReadError, ConnectionResetError, BrokenPipeError):
+        pass
     finally:
         writer.close()
         await writer.wait_closed()
