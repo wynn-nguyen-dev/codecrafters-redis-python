@@ -3,6 +3,7 @@ import asyncio
 
 async def read_command(reader: asyncio.StreamReader) -> list[bytes] | None:
     line = await reader.readuntil(b"\r\n")
+    print(line)
 
     if line[0] == ord("*"):
         return None
