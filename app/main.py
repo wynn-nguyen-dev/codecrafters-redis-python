@@ -15,13 +15,10 @@ async def read_command(reader: asyncio.StreamReader) -> list[bytes]:
 
     for _ in range(n):
         header = await reader.readuntil(b"\r\n")
-        print("header:", header)
         length = int(header[1:-2])
-        arg = header[length:-2]
-        print("arg:",arg)
-        args.append(arg)
+        data = await reader.readexactly(length + 2)
+        args.append(data[:-2])
 
-    print(args)
     return args
 
 
