@@ -83,7 +83,7 @@ class Store:
         if not isinstance(value, list):
             raise WrongTypeError()
 
-        value[:0] = items
+        value[:0] = items[:-1]
         return len(value)
 
     def lrange(self, key: bytes, raw_start: int, raw_stop: int) -> list[bytes]:
