@@ -20,7 +20,7 @@ class Error:
 OK = Simple(b"OK")
 PONG = Simple(b"PONG")
 
-Value = None | bytes | int | Simple | Error | Sequence["Value"]
+type Value = None | bytes | int | Simple | Error | Sequence[Value]
 
 
 def encode(v: Value) -> bytes:
@@ -37,7 +37,7 @@ def encode(v: Value) -> bytes:
             return b":%d\r\n" % v
         case bytes():
             return b"$%d\r\n%s\r\n" % (len(v), v)
-        case list():
+        case list() | tuple():
             return b"*%d\r\n" % len(v) + b"".join(encode(x) for x in v)
         case _:
             raise TypeError(f"cannot encode {type(v)}")
