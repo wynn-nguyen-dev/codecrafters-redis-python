@@ -32,7 +32,7 @@ def cmd_ping(store: Store, args: list[bytes]) -> resp.Value:
 def cmd_echo(store: Store, args: list[bytes]) -> resp.Value:
     if len(args) != 2:
         raise WrongArgsError(b"ECHO")
-    return store.get(args[1])
+    return args[1]
 
 
 EXPIRE_UNITS = {b"PX": 0.001, b"EX": 1.0}
@@ -100,7 +100,7 @@ def cmd_lrange(store: Store, args: list[bytes]) -> resp.Value:
 
     try:
         start, stop = int(args[2]), int(args[3])
-        return store.lrange(args[1], start, stop)
-
     except ValueError:
         raise NotIntegerError() from None
+
+    return store.lrange(args[1], start, stop)

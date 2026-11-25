@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal
 
@@ -19,7 +20,7 @@ class Error:
 OK = Simple(b"OK")
 PONG = Simple(b"PONG")
 
-Value = None | bytes | int | Simple | Error | list["Value"]
+Value = None | bytes | int | Simple | Error | Sequence["Value"]
 
 
 def encode(v: Value) -> bytes:

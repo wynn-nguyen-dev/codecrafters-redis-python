@@ -71,7 +71,7 @@ class Store:
         value.extend(items)
         return len(value)
 
-    def lrange(self, key: bytes, raw_start: int, raw_stop: int):
+    def lrange(self, key: bytes, raw_start: int, raw_stop: int) -> list[bytes]:
         entry = self._get_entry(key)
 
         if entry is None:
