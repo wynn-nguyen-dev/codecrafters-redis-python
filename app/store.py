@@ -3,6 +3,21 @@ import time
 from app.errors import WrongTypeError
 
 
+def normalize_index_range(start: int, stop: int, length: int) -> tuple[int, int] | None:
+    if start < 0:
+        start = max(start + length, 0)
+
+    if stop < 0:
+        stop += length
+
+    stop = min(stop, length - 1)
+
+    if start >= stop or start >= length:
+        return None
+
+    return start, stop
+
+
 class Store:
     def __init__(self) -> None:
         self._data: dict[bytes, tuple[bytes | list[bytes], float | None]] = {}
@@ -55,6 +70,25 @@ class Store:
 
         value.extend(items)
         return len(value)
+
+    def lrange(self, key: bytes, raw_start: int, raw_stop: int):
+        entry = self._get_entry(key)
+
+        if entry is None:
+            return []
+
+        value, _ = entry
+        if not isinstance(value, list):
+            raise WrongTypeError()
+
+        range_ = normalize_index_range(raw_start, raw_stop, len(value))
+
+        if range_ is None:
+            return []
+
+        s, e = range_
+
+        return value[s : e + 1]
 
     def delete(self, key: bytes) -> bool:
         entry = self._get_entry(key)

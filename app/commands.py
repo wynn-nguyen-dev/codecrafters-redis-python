@@ -5,7 +5,7 @@ from app import resp
 from app.errors import InvalidExpireError, NotIntegerError, SyntaxErr, WrongArgsError
 from app.store import Store
 
-Handler = Callable[[Store, list[bytes]], bytes]
+Handler = Callable[[Store, list[bytes]], resp.Value]
 COMMANDS: dict[bytes, Handler] = {}
 
 
@@ -24,22 +24,22 @@ def command(cmd: bytes):
 
 
 @command(b"PING")
-def cmd_ping(store: Store, args: list[bytes]) -> bytes:
-    return resp.simple(b"PONG")
+def cmd_ping(store: Store, args: list[bytes]) -> resp.Value:
+    return resp.PONG
 
 
 @command(b"ECHO")
-def cmd_echo(store: Store, args: list[bytes]) -> bytes:
+def cmd_echo(store: Store, args: list[bytes]) -> resp.Value:
     if len(args) != 2:
         raise WrongArgsError(b"ECHO")
-    return resp.bulk(args[1])
+    return store.get(args[1])
 
 
 EXPIRE_UNITS = {b"PX": 0.001, b"EX": 1.0}
 
 
 @command(b"SET")
-def cmd_set(store: Store, args: list[bytes]) -> bytes:
+def cmd_set(store: Store, args: list[bytes]) -> resp.Value:
     if len(args) < 3:
         raise WrongArgsError(b"SET")
 
@@ -74,20 +74,33 @@ def cmd_set(store: Store, args: list[bytes]) -> bytes:
 
     store.set(key, value, expiry)
 
-    return resp.simple(b"OK")
+    return resp.OK
 
 
 @command(b"GET")
-def cmd_get(store: Store, args: list[bytes]) -> bytes:
+def cmd_get(store: Store, args: list[bytes]) -> resp.Value:
     if len(args) != 2:
         raise WrongArgsError(b"GET")
 
-    return resp.bulk(store.get(args[1]))
+    return store.get(args[1])
 
 
 @command(b"RPUSH")
-def cmd_rpush(store: Store, args: list[bytes]) -> bytes:
+def cmd_rpush(store: Store, args: list[bytes]) -> resp.Value:
     if len(args) < 3:
         raise WrongArgsError(b"RPUSH")
 
-    return resp.integer(store.rpush(args[1], args[2:]))
+    return store.rpush(args[1], args[2:])
+
+
+@command(b"LRANGE")
+def cmd_lrange(store: Store, args: list[bytes]) -> resp.Value:
+    if len(args) != 4:
+        raise WrongArgsError(b"LRANGE")
+
+    try:
+        start, stop = int(args[2]), int(args[3])
+        return store.lrange(args[1], start, stop)
+
+    except ValueError:
+        raise NotIntegerError() from None

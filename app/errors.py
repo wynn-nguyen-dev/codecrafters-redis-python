@@ -1,5 +1,8 @@
+from typing import Literal
+
+
 class RedisError(Exception):
-    kind: bytes = b"ERR"
+    kind: Literal[b"ERR", b"WRONGTYPE"] | bytes = b"ERR"
 
     def __init__(self, message: bytes) -> None:
         super().__init__(message)

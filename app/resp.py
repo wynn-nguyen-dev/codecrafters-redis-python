@@ -1,30 +1,45 @@
 import asyncio
+from dataclasses import dataclass
+from typing import Literal
 
 CRLF = b"\r\n"
 
 
-def simple(s: bytes) -> bytes:
-    return b"+%s\r\n" % s
+@dataclass(frozen=True, slots=True)
+class Simple:
+    value: bytes
 
 
-def bulk(s: bytes | None) -> bytes:
-    if s is None:
-        return b"$-1\r\n"
-    return b"$%d\r\n%s\r\n" % (len(s), s)
+@dataclass(frozen=True, slots=True)
+class Error:
+    message: bytes
+    kind: Literal[b"ERR", b"WRONGTYPE"] | bytes = b"ERR"
 
 
-def error(msg: bytes, kind: bytes = b"ERR") -> bytes:
-    return b"-%s %s\r\n" % (kind, msg)
+OK = Simple(b"OK")
+PONG = Simple(b"PONG")
+
+Value = None | bytes | int | Simple | Error | list["Value"]
 
 
-def integer(n: int) -> bytes:
-    return b":%d\r\n" % n
-
-
-def array(items: list[bytes] | None) -> bytes:
-    if items is None:
-        return b"*-1\r\n"
-    return b"*%d\r\n" % len(items) + b"".join(items)
+def encode(v: Value) -> bytes:
+    match v:
+        case None:
+            return b"$-1\r\n"
+        case Simple(value):
+            return b"+%s\r\n" % value
+        case Error(message, kind):
+            return b"-%s %s\r\n" % (kind, message)
+        case bool():
+            raise TypeError("bool is not a RESP value")
+        case int():
+            return b":%d\r\n" % v
+        case bytes():
+            return b"$%d\r\n%s\r\n" % (len(v), v)
+        case list():
+            return b"*%d\r\n" % len(v) + b"".join(encode(x) for x in v)
+        case _:
+            raise TypeError(f"cannot encode {type(v)}")
 
 
 async def read_command(reader: asyncio.StreamReader) -> list[bytes]:

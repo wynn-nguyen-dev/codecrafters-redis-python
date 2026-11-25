@@ -1,8 +1,11 @@
 import asyncio
+import logging
 
 from app import commands, resp
 from app.errors import RedisError
 from app.store import Store
+
+logger = logging.getLogger(__name__)
 
 
 def make_handle_client(store: Store):
@@ -17,18 +20,19 @@ def make_handle_client(store: Store):
                 handler = commands.get_handler(args[0])
 
                 if handler is None:
-                    response = resp.error(b"unknown command '%s'" % args[0])
+                    response = resp.Error(b"unknown command '%s'" % args[0])
                 else:
                     try:
                         response = handler(store, args)
                     except RedisError as e:
-                        response = resp.error(e.message, e.kind)
-                    except IndexError, ValueError:
-                        response = resp.error(
+                        response = resp.Error(e.message, e.kind)
+                    except Exception:
+                        logger.exception("handler crashed: %r", args)
+                        response = resp.Error(
                             b"wrong number of arguments or invalid value"
                         )
 
-                writer.write(response)
+                writer.write(resp.encode(response))
                 await writer.drain()
         except asyncio.IncompleteReadError, ConnectionResetError, BrokenPipeError:
             pass
