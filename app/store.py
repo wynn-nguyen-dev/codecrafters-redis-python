@@ -1,6 +1,6 @@
 import time
 
-from app.errors import WrongTypeError
+from app.errors import MuseBePositiveIntegerError, WrongTypeError
 
 
 def normalize_index_range(start: int, stop: int, length: int) -> tuple[int, int] | None:
@@ -117,7 +117,7 @@ class Store:
 
         return len(value)
 
-    def lpop(self, key: bytes) -> bytes | None:
+    def lpop(self, key: bytes, count: int | None = None) -> bytes | list[bytes] | None:
         entry = self._get_entry(key)
 
         if entry is None:
@@ -127,7 +127,19 @@ class Store:
         if not isinstance(value, list):
             raise WrongTypeError()
 
-        return value.pop(0)
+        if count is None or (count is not None and count == 1):
+            return value.pop(0)
+
+        if count < 0:
+            raise MuseBePositiveIntegerError()
+
+        if count == 0:
+            return []
+
+        result = [*value[:count]]
+        del value[:count]
+
+        return result
 
     def delete(self, key: bytes) -> bool:
         entry = self._get_entry(key)

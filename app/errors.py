@@ -37,3 +37,8 @@ class WrongArgsError(RedisError):
 class InvalidExpireError(RedisError):
     def __init__(self, cmd: bytes) -> None:
         super().__init__(b"invalid expire time in '%s' command" % cmd.lower())
+
+
+class MuseBePositiveIntegerError(RedisError):
+    def __init__(self) -> None:
+        super().__init__(b"value is out of range, must be positive")

@@ -108,12 +108,21 @@ def cmd_llen(store: Store, args: list[bytes]) -> resp.Value:
 
     return store.llen(args[1])
 
+
 @command(b"LPOP")
 def cmd_lpop(store: Store, args: list[bytes]) -> resp.Value:
-    if len(args) != 2:
+    if len(args) != 2 or len(args) != 3:
         raise WrongArgsError(b"LPOP")
 
-    return store.lpop(args[1])
+    if len(args) == 2:
+        return store.lpop(args[1])
+
+    try:
+        count = int(args[2])
+    except ValueError:
+        raise NotIntegerError() from None
+
+    return store.lpop(args[1], count)
 
 
 @command(b"LRANGE")
