@@ -101,6 +101,14 @@ def cmd_lpush(store: Store, args: list[bytes]) -> resp.Value:
     return store.lpush(args[1], args[2:])
 
 
+@command(b"LLEN")
+def cmd_llen(store: Store, args: list[bytes]) -> resp.Value:
+    if len(args) != 2:
+        raise WrongArgsError(b"LLEN")
+
+    return store.llen(args[1])
+
+
 @command(b"LRANGE")
 def cmd_lrange(store: Store, args: list[bytes]) -> resp.Value:
     if len(args) != 4:

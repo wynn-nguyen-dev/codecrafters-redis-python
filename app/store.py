@@ -104,6 +104,18 @@ class Store:
         s, e = range_
 
         return value[s : e + 1]
+    
+    def llen(self, key: bytes) -> int:
+        entry = self._get_entry(key)
+
+        if entry is None:
+            return 0
+
+        value, _ = entry
+        if not isinstance(value, list):
+            raise WrongTypeError()
+
+        return len(value)
 
     def delete(self, key: bytes) -> bool:
         entry = self._get_entry(key)
