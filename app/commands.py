@@ -111,7 +111,7 @@ def cmd_llen(store: Store, args: list[bytes]) -> resp.Value:
 
 @command(b"LPOP")
 def cmd_lpop(store: Store, args: list[bytes]) -> resp.Value:
-    if len(args) != 2 or len(args) != 3:
+    if len(args) not in (2, 3):
         raise WrongArgsError(b"LPOP")
 
     if len(args) == 2:

@@ -12,7 +12,7 @@ def normalize_index_range(start: int, stop: int, length: int) -> tuple[int, int]
 
     stop = min(stop, length - 1)
 
-    if start >= stop or start >= length:
+    if start > stop or start >= length:
         return None
 
     return start, stop
@@ -127,19 +127,20 @@ class Store:
         if not isinstance(value, list):
             raise WrongTypeError()
 
-        if count is None or (count is not None and count == 1):
-            return value.pop(0)
-
-        if count < 0:
+        if count is not None and count < 0:
             raise MuseBePositiveIntegerError()
 
-        if count == 0:
-            return []
+        n = 1 if count is None else count
+        items = value[:n]
+        del value[:n]
 
-        result = [*value[:count]]
-        del value[:count]
+        if not value:
+            del self._data[key]
 
-        return result
+        if count is None:
+            return items[0] if items else None
+
+        return items
 
     def delete(self, key: bytes) -> bool:
         entry = self._get_entry(key)
