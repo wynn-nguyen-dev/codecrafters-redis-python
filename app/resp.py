@@ -13,8 +13,8 @@ def bulk(s: bytes | None) -> bytes:
     return b"$%d\r\n%s\r\n" % (len(s), s)
 
 
-def error(msg: bytes) -> bytes:
-    return b"-ERR %s\r\n" % msg
+def error(msg: bytes, kind: bytes = b"ERR") -> bytes:
+    return b"-%s %s\r\n" % (kind, msg)
 
 
 def integer(n: int) -> bytes:

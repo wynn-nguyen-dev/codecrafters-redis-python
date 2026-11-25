@@ -1,6 +1,7 @@
 import asyncio
 
 from app import commands, resp
+from app.errors import RedisError
 from app.store import Store
 
 
@@ -16,10 +17,12 @@ def make_handle_client(store: Store):
                 handler = commands.get_handler(args[0])
 
                 if handler is None:
-                    response = resp.error(b"unknown command")
+                    response = resp.error(b"unknown command '%s'" % args[0])
                 else:
                     try:
                         response = handler(store, args)
+                    except RedisError as e:
+                        response = resp.error(e.message, e.kind)
                     except IndexError, ValueError:
                         response = resp.error(
                             b"wrong number of arguments or invalid value"

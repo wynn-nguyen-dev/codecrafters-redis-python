@@ -2,6 +2,7 @@ import time
 from collections.abc import Callable
 
 from app import resp
+from app.errors import InvalidExpireError, NotIntegerError, SyntaxErr, WrongArgsError
 from app.store import Store
 
 Handler = Callable[[Store, list[bytes]], bytes]
@@ -30,7 +31,7 @@ def cmd_ping(store: Store, args: list[bytes]) -> bytes:
 @command(b"ECHO")
 def cmd_echo(store: Store, args: list[bytes]) -> bytes:
     if len(args) != 2:
-        return resp.error(b"wrong number of arguments for 'ECHO'")
+        raise WrongArgsError(b"ECHO")
     return resp.bulk(args[1])
 
 
@@ -40,7 +41,7 @@ EXPIRE_UNITS = {b"PX": 0.001, b"EX": 1.0}
 @command(b"SET")
 def cmd_set(store: Store, args: list[bytes]) -> bytes:
     if len(args) < 3:
-        return resp.error(b"wrong number of arguments for 'SET'")
+        raise WrongArgsError(b"SET")
 
     _, key, value, *opts = args
 
@@ -51,23 +52,23 @@ def cmd_set(store: Store, args: list[bytes]) -> bytes:
         opt = raw_opt.upper()
 
         if opt not in EXPIRE_UNITS:
-            return resp.error(b"syntax error")
+            raise SyntaxErr()
 
         if expiry is not None:  # ! PX 100 EX 5
-            return resp.error(b"syntax error")
+            raise SyntaxErr()
 
         raw = next(it, None)
 
         if raw is None:
-            return resp.error(b"syntax error")
+            raise SyntaxErr()
 
         try:
             amount = int(raw)
         except ValueError:
-            return resp.error(b"value is not an integer or out of range")
+            raise NotIntegerError()
 
         if amount <= 0:
-            return resp.error(b"invalid expire time in 'set' command")
+            raise InvalidExpireError(b"SET")
 
         expiry = time.monotonic() + amount * EXPIRE_UNITS[opt]
 
@@ -79,6 +80,14 @@ def cmd_set(store: Store, args: list[bytes]) -> bytes:
 @command(b"GET")
 def cmd_get(store: Store, args: list[bytes]) -> bytes:
     if len(args) != 2:
-        return resp.error(b"wrong number of arguments for 'GET'")
+        raise WrongArgsError(b"GET")
 
     return resp.bulk(store.get(args[1]))
+
+
+@command(b"RPUSH")
+def cmd_rpush(store: Store, args: list[bytes]) -> bytes:
+    if len(args) < 3:
+        raise WrongArgsError(b"RPUSH")
+
+    return resp.integer(store.rpush(args[1], args[2:]))
