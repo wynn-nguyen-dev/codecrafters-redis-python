@@ -71,6 +71,21 @@ class Store:
         value.extend(items)
         return len(value)
 
+    def lpush(self, key: bytes, items: list[bytes]) -> int:
+        entry = self._get_entry(key)
+
+        if entry is None:
+            self._data[key] = (list(items), None)
+            return len(items)
+
+        value, _ = entry
+
+        if not isinstance(value, list):
+            raise WrongTypeError()
+
+        value[:0] = items
+        return len(value)
+
     def lrange(self, key: bytes, raw_start: int, raw_stop: int) -> list[bytes]:
         entry = self._get_entry(key)
 
