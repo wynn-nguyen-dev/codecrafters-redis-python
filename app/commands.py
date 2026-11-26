@@ -223,3 +223,10 @@ async def cmd_blpop(store: Store, args: list[bytes]) -> resp.Value:
 
     return [key, value]
 
+
+@command(b"TYPE")
+def cmd_type(store: Store, args: list[bytes]) -> resp.Value:
+    if len(args) != 2:
+        raise WrongArgsError(b"TYPE")
+
+    return resp.Simple(store.type_of(args[1]))

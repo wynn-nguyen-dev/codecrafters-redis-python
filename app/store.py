@@ -290,3 +290,25 @@ class Store:
 
                 if not waiters and self._waiters[key] is waiters:
                     del self._waiters[key]
+
+    def type_of(self, key: bytes) -> bytes:
+        """Return the type name of the value at `key`.
+
+        Returns:
+            b"string", b"list", or b"none" if the key is missing/expired.
+        """
+
+        entry = self._get_entry(key)
+
+        if entry is None:
+            return b"none"
+
+        value, _ = entry
+
+        if isinstance(value, bytes):
+            return b"string"
+
+        if isinstance(value, list):
+            return b"list"
+
+        raise TypeError(f"unknown value type: {type(value)}")
