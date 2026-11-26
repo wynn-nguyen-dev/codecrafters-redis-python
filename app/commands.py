@@ -1,11 +1,23 @@
+import inspect
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 from app import resp
-from app.errors import InvalidExpireError, NotIntegerError, SyntaxErr, WrongArgsError
+from app.errors import (
+    InvalidExpireError,
+    InvalidTimeoutError,
+    NotIntegerError,
+    SyntaxErr,
+    UnknownCommandError,
+    WrongArgsError,
+)
 from app.store import Store
 
-Handler = Callable[[Store, list[bytes]], resp.Value]
+type HandlerReturn = resp.Value | Awaitable[resp.Value]
+type Handler = Callable[[Store, list[bytes]], HandlerReturn]
+"""A command handler. May be sync (returns a Value) or async (returns an
+awaitable Value). `run_handler` hides the difference from the server."""
+
 COMMANDS: dict[bytes, Handler] = {}
 
 
@@ -14,13 +26,40 @@ def get_handler(cmd: bytes):
 
 
 def command(cmd: bytes):
-    """Decorator to register handler to COMMANDS"""
+    """Register a handler under `cmd` (case-insensitive).
+
+    Works for both sync and async handlers. Returns the original function
+    unchanged, so handlers can still be called directly in tests.
+    """
 
     def decorator(fn: Handler) -> Handler:
         COMMANDS[cmd.upper()] = fn
         return fn
 
     return decorator
+
+
+async def run_handler(store: Store, args: list[bytes]) -> resp.Value:
+    """Look up and execute the handler for `args[0]`, awaiting it if needed.
+
+    Sync handlers never yield to the event loop, so each runs atomically
+    relative to other clients. Only async handlers (e.g. BLPOP) may suspend.
+
+    Raises:
+        UnknownCommandError: if no handler is registered for the command.
+        RedisError: propagated from the handler.
+    """
+    handler = COMMANDS.get(args[0].upper())
+
+    if handler is None:
+        raise UnknownCommandError(args[0])
+
+    result = handler(store, args)
+
+    if inspect.isawaitable(result):
+        return await result
+
+    return result
 
 
 @command(b"PING")
@@ -136,3 +175,51 @@ def cmd_lrange(store: Store, args: list[bytes]) -> resp.Value:
         raise NotIntegerError() from None
 
     return store.lrange(args[1], start, stop)
+
+
+def parse_timeout(raw: bytes) -> float | None:
+    """Parse a blocking-command timeout given in seconds (may be fractional).
+
+    Returns:
+        None for 0 (block forever), otherwise the timeout in seconds.
+    Raises:
+        InvalidTimeoutError: if not a number, or negative.
+    """
+
+    try:
+        timeout = float(raw)
+    except ValueError:
+        raise InvalidTimeoutError()
+
+    if timeout < 0:
+        raise InvalidTimeoutError(b"timeout is negative")
+
+    if timeout == 0:
+        return None
+
+    return timeout
+
+
+@command(b"BLPOP")
+async def cmd_blpop(store: Store, args: list[bytes]) -> resp.Value:
+    """BLPOP key timeout
+
+    Pop the first element of the list at `key`, waiting up to `timeout`
+    seconds if it is empty (0 = forever).
+
+    Returns:
+        [key, value] on success, or a null array on timeout.
+    """
+    if len(args) != 3:
+        raise WrongArgsError(b"BLPOP")
+
+    key = args[1]
+    timeout = parse_timeout(args[2])
+
+    value = await store.blpop(key, timeout)
+
+    if value is None:
+        return resp.NULL_ARRAY
+
+    return [key, value]
+

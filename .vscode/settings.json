@@ -1,0 +1,14 @@
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        ".venv": true,
+        ".codecrafters": true,
+        "uv.lock": true,
+        "your_program.sh": true,
+        ".gitattributes": true,
+    }
+}

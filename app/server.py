@@ -17,20 +17,13 @@ def make_handle_client(store: Store):
                 if not args:
                     continue
 
-                handler = commands.get_handler(args[0])
-
-                if handler is None:
-                    response = resp.Error(b"unknown command '%s'" % args[0])
-                else:
-                    try:
-                        response = handler(store, args)
-                    except RedisError as e:
-                        response = resp.Error(e.message, e.kind)
-                    except Exception:
-                        logger.exception("handler crashed: %r", args)
-                        response = resp.Error(
-                            b"wrong number of arguments or invalid value"
-                        )
+                try:
+                    response = await commands.run_handler(store, args)
+                except RedisError as e:
+                    response = resp.Error(e.message, e.kind)
+                except Exception:
+                    logger.exception("handler crashed: %r", args)
+                    response = resp.Error(b"internal error")
 
                 writer.write(resp.encode(response))
                 await writer.drain()
